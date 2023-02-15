@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ExamApp.Context;
+using ExamApp.Interfaces;
 using ExamApp.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ExamApp;
 
@@ -35,7 +38,22 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddControllers();
-        builder.Services.AddTransient<IStudentsService, StudentsService>();
+        builder.Services.AddDbContext<MainContext>(options =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                options.UseInMemoryDatabase("Dev");
+            }
+            else
+            {
+                var connectionString = builder.Configuration.GetValue<string>("DbConnectionString");
+                options.UseSqlServer(connectionString);
+            }
+        });
+        //builder.Services.AddTransient<IStudentsService, StudentsService>();
+        builder.Services.AddScoped<IStudentsService, StudentsService>();
+        builder.Services.AddScoped<ICoursesService, CourseService>();
+        // Service should be scoped instead, as we want to maintain the context throughout the lifetime of a single http request, and not a single initialization
 
         var app = builder.Build();
 
